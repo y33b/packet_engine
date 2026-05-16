@@ -1,0 +1,103 @@
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import json
+import numpy as np
+from pyod.models.iforest import IForest
+
+app = FastAPI()
+
+# ----------------------------
+# ML MODEL
+# ----------------------------
+model = IForest(contamination=0.05, random_state=42)
+buffer = []
+trained = False
+
+# ----------------------------
+# FEATURE ENGINEERING
+# ----------------------------
+def features(e):
+    return np.array([
+        float(e.get("PacketRate", 0)) / 100.0,
+        float(e.get("UniquePorts", 0)) / 50.0,
+        float(e.get("FailedAtt", 0)) / 20.0
+    ])
+
+# ----------------------------
+# RULE CLASSIFIER
+# ----------------------------
+def classify(e):
+    ports = int(e.get("UniquePorts", 0))
+    rate = int(e.get("PacketRate", 0))
+    failed = int(e.get("FailedAtt", 0))
+
+    if ports > 30 and rate > 40:
+        return "PORT_SCAN"
+    if rate > 120:
+        return "FLOOD"
+    if failed > 10:
+        return "BRUTE_FORCE"
+    return "NORMAL"
+
+
+# ----------------------------
+# WEBSOCKET ENDPOINT
+# ----------------------------
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    global trained
+
+    await websocket.accept()
+    print("🧠 Client connected (Go IDS or Dashboard)")
+
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            data = json.loads(msg)
+
+            # unwrap Go format
+            e = data.get("data", data)
+
+            ip = e.get("SrcIP", "unknown")
+
+            # ----------------------------
+            # FEATURE BUILD
+            # ----------------------------
+            x = features(e)
+            buffer.append(x)
+
+            # ----------------------------
+            # TRAIN MODEL
+            # ----------------------------
+            if len(buffer) > 50 and not trained:
+                model.fit(np.array(buffer))
+                trained = True
+                print("🔥 MODEL TRAINED")
+
+            if not trained:
+                continue
+
+            # ----------------------------
+            # PREDICT
+            # ----------------------------
+            anomaly = int(model.predict([x])[0])
+            score = float(model.decision_function([x])[0])
+            label = classify(e)
+
+            # ----------------------------
+            # OUTPUT FORMAT
+            # ----------------------------
+            output = {
+                "IP": ip,
+                "Type": label,
+                "Risk": round(score, 4),
+                "Anomaly": anomaly,
+                "Message": "ML detection"
+            }
+
+            print(output)
+
+            # send back to client
+            await websocket.send_text(json.dumps(output))
+
+    except WebSocketDisconnect:
+        print("❌ Client disconnected")

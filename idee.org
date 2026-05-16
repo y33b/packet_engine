@@ -1,0 +1,24 @@
+* idee of nexus project in 3 days
+
+**** IDS with go to keep running in the background of machine and the data will go to a dashboard in web app with a layer of analized data
+
+*** ids is the choice !!!
+
+                ┌────────────────────┐
+                │  Go IDS Engine     │
+                │                    │
+                │  - traffic loop    │
+                │  - detection       │
+                │  - AI scoring      │
+                │  - in-memory data  │
+                └─────────┬──────────┘
+                          ↓
+                ┌────────────────────┐
+                │ HTTP API (Go)      │
+                │ /alerts /stats     |
+		│ AI with python     |
+                └─────────┬──────────┘
+                          ↓
+                ┌────────────────────┐
+                │ Web Dashboard      │
+                └────────────────────┘

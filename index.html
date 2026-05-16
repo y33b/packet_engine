@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>IDS Dashboard</title>
+
+  <style>
+    body {
+      background: #0b0f14;
+      color: #c9d1d9;
+      font-family: monospace;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h2 {
+      color: #ffffff;
+      font-weight: normal;
+      margin-bottom: 20px;
+    }
+
+    #feed {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .box {
+      background: #111826;
+      border: 1px solid #1f2a37;
+      padding: 12px;
+      border-radius: 6px;
+      transition: 0.2s;
+    }
+
+    .box:hover {
+      border-color: #2f81f7;
+      background: #0f1722;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 2px 0;
+    }
+
+    .label { color: #8b949e; }
+    .value { color: #e6edf3; }
+
+    .attack { border-left: 4px solid #ff4d4d; }
+    .normal { border-left: 4px solid #2ea043; }
+
+    .risk-high { color: #ff4d4d; }
+    .risk-mid { color: #f2cc60; }
+    .risk-low { color: #2ea043; }
+  </style>
+</head>
+
+<body>
+
+<h2>Real-Time IDS Dashboard</h2>
+<div id="feed"></div>
+
+<script>
+ const ws = new WebSocket("ws://localhost:8080/ws");
+ const feed = document.getElementById("feed");
+
+ // store latest state per IP (NO DUPLICATES)
+ let ipTable = {};
+
+ ws.onopen = () => {
+     console.log("CONNECTED");
+ };
+
+ ws.onmessage = (msg) => {
+     const packet = JSON.parse(msg.data);
+     const data = packet.Data ?? packet.data ?? packet;
+
+     const ip = data.IP ?? data.SrcIP ?? "unknown";
+     const risk = Number(data.Risk ?? data.PacketRate ?? 0);
+
+     // ----------------------------
+     // FINAL TYPE LOGIC (FIXED)
+     // ----------------------------
+     let type = (data.Type || "ML").toUpperCase();
+
+     if (!data.Type || type === "ML") {
+         if (data.PacketRate > 100) type = "FLOOD";
+         else if (data.UniquePorts > 30) type = "PORT_SCAN";
+         else if (data.FailedAtt > 10) type = "BRUTE_FORCE";
+         else type = "NORMAL";
+     }
+
+     const message = data.Message ?? "LIVE ML";
+
+     ipTable[ip] = {
+         ip,
+         type,
+         risk,
+         message,
+         lastSeen: Date.now()
+     };
+
+     renderTop10();
+ };
+
+ function getRiskClass(risk) {
+     if (risk > 70) return "risk-high";
+     if (risk > 30) return "risk-mid";
+     return "risk-low";
+ }
+
+ function renderTop10() {
+     feed.innerHTML = "";
+
+     const top = Object.values(ipTable)
+		       .sort((a, b) => b.risk - a.risk)
+		       .slice(0, 10);
+
+     top.forEach(p => {
+         const div = document.createElement("div");
+
+         const isAttack = p.type !== "NORMAL";
+
+         div.className = "box " + (isAttack ? "attack" : "normal");
+
+         div.innerHTML = `
+             <div class="row">
+                 <span class="label">IP</span>
+                 <span class="value">${p.ip}</span>
+             </div>
+
+             <div class="row">
+                 <span class="label">TYPE</span>
+                 <span class="value">${p.type}</span>
+             </div>
+
+             <div class="row">
+                 <span class="label">RISK</span>
+                 <span class="value ${getRiskClass(p.risk)}">${p.risk}</span>
+             </div>
+
+             <div class="row">
+                 <span class="label">MESSAGE</span>
+                 <span class="value">${p.message}</span>
+             </div>
+         `;
+
+         feed.appendChild(div);
+     });
+ }
+
+ ws.onerror = (e) => console.log("WS ERROR", e);
+ ws.onclose = () => console.log("DISCONNECTED");
+</script>
+
+</body>
+</html>

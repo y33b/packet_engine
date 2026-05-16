@@ -1,0 +1,160 @@
+import asyncio
+import json
+import numpy as np
+import websockets
+from collections import defaultdict, deque
+from pyod.models.iforest import IForest
+
+# ----------------------------
+# CONFIG
+# ----------------------------
+WS_URL = "ws://localhost:8765"
+# ----------------------------
+# MODEL
+# ----------------------------
+model = IForest(
+    contamination=0.05,
+    random_state=42
+)
+
+buffer = []
+trained = False
+
+# ----------------------------
+# SMOOTHING
+# ----------------------------
+score_history = defaultdict(lambda: deque(maxlen=15))
+
+# ----------------------------
+# TRUST FILTER (reduce noise)
+# ----------------------------
+def is_trusted(ip: str) -> bool:
+    return (
+        ip.startswith("172.") or
+        ip.startswith("104.18.") or
+        ip.startswith("157.240.")
+    )
+
+# ----------------------------
+# FEATURE ENGINEERING (NORMALIZED FIX)
+# ----------------------------
+def features(e):
+    return np.array([
+        e.get("PacketRate", 0) / 100.0,
+        e.get("UniquePorts", 0) / 50.0,
+        e.get("FailedAtt", 0) / 20.0
+    ])
+
+# ----------------------------
+# RULE CLASSIFIER
+# ----------------------------
+def classify(e):
+    ports = e.get("UniquePorts", 0)
+    rate = e.get("PacketRate", 0)
+    failed = e.get("FailedAtt", 0)
+
+    if ports > 30 and rate > 40:
+        return "PORT_SCAN"
+
+    if rate > 120:
+        return "FLOOD"
+
+    if failed > 10:
+        return "BRUTE_FORCE"
+
+    return "NORMAL"
+
+# ----------------------------
+# STABLE ALERT LOGIC
+# ----------------------------
+def should_alert(ip, score, anomaly):
+    score_history[ip].append(score)
+    avg_score = sum(score_history[ip]) / len(score_history[ip])
+
+    return anomaly == 1 and avg_score > 0.18
+
+# ----------------------------
+# MAIN LOOP
+# ----------------------------
+async def run():
+    global trained
+
+    while True:
+        try:
+            async with websockets.connect(
+                WS_URL,
+                ping_interval=20,
+                ping_timeout=60
+            ) as ws:
+
+                print("🧠 ML ENGINE CONNECTED")
+
+                while True:
+                    msg = await ws.recv()
+                    data = json.loads(msg)
+
+                    # only accept Go messages
+                    if data.get("type") not in ["ml", "alert"]:
+                        continue
+
+                    e = data["data"]
+                    ip = e.get("SrcIP", "unknown")
+
+                    # ignore trusted CDN traffic
+                    if is_trusted(ip):
+                        continue
+
+                    x = features(e)
+                    buffer.append(x)
+
+                    # ----------------------------
+                    # TRAIN MODEL
+                    # ----------------------------
+                    if len(buffer) < 50:
+                        print(f"📊 learning baseline... {len(buffer)}")
+                        continue
+
+                    if not trained:
+                        model.fit(np.array(buffer))
+                        trained = True
+                        print("🔥 MODEL TRAINED")
+
+                    # ----------------------------
+                    # PREDICT
+                    # ----------------------------
+                    anomaly = int(model.predict([x])[0])
+                    score = float(model.decision_function([x])[0])
+                    label = classify(e)
+
+                    # ----------------------------
+                    # DECISION
+                    # ----------------------------
+                    alert = should_alert(ip, score, anomaly)
+
+                    # ----------------------------
+                    # CLEAN OUTPUT FOR DASHBOARD
+                    # ----------------------------
+                    output = {
+                        "IP": ip,
+                        "Type": label,
+                        "Risk": round(score, 4),
+                        "Anomaly": anomaly,
+                        "Message": "ML detection"
+                    }
+
+                    print(output)
+
+                    # send ONLY when important OR always (your choice)
+                    if alert:
+                        output["Message"] = "🚨 THREAT DETECTED"
+
+                    await ws.send(json.dumps(output))
+
+        except Exception as e:
+            print("⚠️ reconnecting...", e)
+            await asyncio.sleep(2)
+
+# ----------------------------
+# START
+# ----------------------------
+asyncio.run(run())

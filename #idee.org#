@@ -1,0 +1,13 @@
+* idee of nexus project in 3 days
+
+**** IDS with go to keep running in the background of machine and the data will go to a dashboard in web app with a layer of analized data
+
+*** ids is the choice !!!
+
+
+** build ids with go
+
+** will be in a low level capture ips call and monitor network traffic for all services in the machine
+** detect patterns
+** detect anomalise
+** monitore critical sys files

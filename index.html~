@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>IDS WebSocket</h1>
+
+    <script>
+     const ws = new WebSocket("ws://localhost:8080/ws");
+
+     ws.onmessage = (msg) => {
+	 console.log("ALERT:", JSON.parse(msg.data));
+     };
+    </script>
+
+</body>
+</html>

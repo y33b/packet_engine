@@ -1,0 +1,52 @@
+package model
+
+type IpStats struct{
+	IP string
+	Requests int
+	RequestsPerSec int
+	FailedAtt int
+	UniquePort map[int]bool
+	LestSeen int
+}
+type ALERT_TYPE int
+
+const (
+    PORT_SCAN ALERT_TYPE = iota
+    FLOOD
+    BRUTE_FORCE
+    SUSPICIOUS
+    ANOMALY_DETECTED
+)
+var AlertTypeName = map[ALERT_TYPE]string{
+    PORT_SCAN:        "PORT_SCAN",
+    FLOOD:            "FLOOD",
+    BRUTE_FORCE:      "BRUTE_FROCE",
+    SUSPICIOUS:      "SUSSPICIOUS",
+    ANOMALY_DETECTED: "ANOMALY_DETECTEd",
+}
+
+type STATUS int
+const {
+	FAIL STATUS = iota
+	SUCCESS
+}
+var StatusTypeName = map[STATUS]string{
+	FAIL: "FAIL",
+	SUCCESS: "SUCCESS"
+}
+type Alert struct{
+	ID string
+	IP string
+	Type ALERT_TYPE
+	Risk float64
+	Timestemp int64
+	Message string
+
+}
+
+type Event struct{
+	IP string
+	Port int
+	timestemp int64
+	status STATUS
+}

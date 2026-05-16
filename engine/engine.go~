@@ -1,0 +1,9 @@
+package engine
+
+import (
+	"nexus/model"
+)
+
+func EnginePipeLine(event model.Event) {
+
+}

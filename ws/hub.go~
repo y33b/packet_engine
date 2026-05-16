@@ -1,0 +1,24 @@
+package ws
+
+import (
+	"net/http"
+
+	"github.com/gorilla/websocket"
+	"nexus/model"
+)
+
+type Hub struct {
+	Clients   map[*websocket.Conn]bool
+	Broadcast chan model.Alert
+	Upgrader  websocket.Upgrader
+}
+
+func NewHub() *Hub {
+	return &Hub{
+		Clients:   make(map[*websocket.Conn]bool),
+		Broadcast: make(chan model.Alert, 100),
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool { return true },
+		},
+	}
+}

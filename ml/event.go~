@@ -1,0 +1,30 @@
+package ml
+
+import (
+	"nexus/model"
+	"time"
+)
+
+type MLEvent struct {
+	SrcIP string
+
+	PacketRate  int
+	Requests    int
+	UniquePorts int
+	FailedAtt   int
+
+	Timestamp int64
+}
+
+func BuildMLEvent(s *model.IPStats) MLEvent {
+	return MLEvent{
+		SrcIP: s.IP,
+
+		PacketRate:  s.RequestsPerSec,
+		Requests:    s.Requests,
+		UniquePorts: len(s.Ports),
+		FailedAtt:   s.FailedAtt,
+
+		Timestamp: time.Now().Unix(),
+	}
+}

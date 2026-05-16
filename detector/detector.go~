@@ -1,0 +1,5 @@
+package detector
+
+func Detect() float32 {
+	return 10
+}

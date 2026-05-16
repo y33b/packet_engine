@@ -1,0 +1,5 @@
+package api
+
+func hell() string {
+	return "hello world"
+}

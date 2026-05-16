@@ -1,0 +1,20 @@
+package main
+
+import (
+	"fmt"
+	"nexus/api"
+	//"nexus/detector"
+	// "nexus/engine"
+	"nexus/model"
+	// "nexus/store"
+)
+
+func main() {
+	fmt.Println(api.Hell())
+	//	var n int64 = 33
+	var even1 model.Event
+	even1.IP = "hdh"
+	even1.Port = 10
+
+	fmt.Println(even1.Timestemp)
+}
