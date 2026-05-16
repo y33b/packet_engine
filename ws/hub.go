@@ -39,7 +39,6 @@ func (h *Hub) HandleWS(w http.ResponseWriter, r *http.Request) {
 	h.Clients[conn] = true
 	h.mu.Unlock()
 
-	// IMPORTANT: keep connection alive + detect disconnect
 	go h.readPump(conn)
 }
 

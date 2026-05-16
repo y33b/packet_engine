@@ -5,7 +5,7 @@ import websockets
 from pyod.models.iforest import IForest
 from collections import defaultdict, deque
 
-GO_WS = "ws://localhost:8080/ws"   # 👈 CONNECT TO GO
+GO_WS = "ws://localhost:8080/ws"  
 
 model = IForest(contamination=0.05)
 buffer = []
@@ -32,7 +32,7 @@ async def run():
             msg = await ws.recv()
             data = json.loads(msg)
 
-            # IMPORTANT: unwrap Go message
+
             e = data.get("data", data)
 
             ip = e.get("SrcIP", "unknown")

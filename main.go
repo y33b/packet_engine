@@ -48,19 +48,12 @@ func cleanPacket(packet gopacket.Packet, eng *engine.Engine) {
 }
 
 func main() {
-
-	// -----------------------
-	// INIT
-	// -----------------------
 	store := storepkg.NewStorage()
 	hub := ws.NewHub()
 
 	eng := engine.NewEngine()
 	eng.Detector = &detector.Detector{}
 
-	// -----------------------
-	// WS SERVER
-	// -----------------------
 	http.HandleFunc("/ws", hub.HandleWS)
 
 	go func() {
@@ -69,10 +62,6 @@ func main() {
 	}()
 
 	go hub.Run()
-
-	// -----------------------
-	// ALERT DISPATCHER
-	// -----------------------
 	go func() {
 		for alert := range eng.Alerts {
 
@@ -83,17 +72,9 @@ func main() {
 
 			go store.SaveAlert(alert)
 
-			fmt.Printf("🚨 ALERT: %s IP=%s Risk=%.2f\n",
-				model.AlertTypeName[alert.Type],
-				alert.IP,
-				alert.Risk,
-			)
 		}
 	}()
 
-	// -----------------------
-	// ML DISPATCHER
-	// -----------------------
 	go func() {
 		for e := range eng.ML {
 
@@ -102,17 +83,8 @@ func main() {
 				Data: e,
 			}
 
-			fmt.Printf("🧠 ML EVENT: %s packets=%d ports=%d\n",
-				e.SrcIP,
-				e.PacketRate,
-				e.UniquePorts,
-			)
 		}
 	}()
-
-	// -----------------------
-	// PACKET CAPTURE
-	// -----------------------
 	handle, err := pcap.OpenLive("wlp0s20f3", 1600, true, pcap.BlockForever)
 	if err != nil {
 		panic(err)

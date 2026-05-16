@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"nexus/detector"
 	"nexus/ml"
 	"nexus/model"
@@ -53,7 +52,6 @@ func (e *Engine) Process(event model.Event) {
 	stats.Ports[event.DstPort] = true
 	stats.LastSeen = now
 
-	// 🔥 REAL FEATURES
 	packetRate := float64(stats.RequestsPerSec) * 10.0
 	uniquePorts := float64(len(stats.Ports)) * 5.0
 	failedAtt := float64(stats.RequestsPerSec) * 0.2
@@ -65,13 +63,6 @@ func (e *Engine) Process(event model.Event) {
 		FailedAtt:   failedAtt,
 		Timestamp:   now.Unix(),
 	}
-
-	fmt.Printf("ML DEBUG → IP=%s rate=%.2f ports=%.2f failed=%.2f\n",
-		mlEvent.SrcIP,
-		mlEvent.PacketRate,
-		mlEvent.UniquePorts,
-		mlEvent.FailedAtt,
-	)
 
 	select {
 	case e.ML <- mlEvent:
@@ -89,11 +80,6 @@ func (e *Engine) Process(event model.Event) {
 		}
 
 		e.LastAlert[event.SrcIP] = now
-
-		fmt.Printf("🚨 ALERT | IP=%s | Risk=%.2f\n",
-			alert.IP,
-			alert.Risk,
-		)
 
 		e.Alerts <- alert
 	}

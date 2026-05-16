@@ -24,10 +24,6 @@ func (d *Detector) Analyze(s *model.IPStats) model.Alert {
 	portCount := len(s.Ports)
 
 	theme := "NORMAL"
-
-	// -----------------------
-	// TRAFFIC VOLUME SIGNAL
-	// -----------------------
 	if s.RequestsPerSec > 20 {
 		score += 0.1
 	}
@@ -37,10 +33,6 @@ func (d *Detector) Analyze(s *model.IPStats) model.Alert {
 	if s.RequestsPerSec > 120 {
 		score += 0.3
 	}
-
-	// -----------------------
-	// PORT BEHAVIOR (SCAN SIGNAL)
-	// -----------------------
 	if portCount > 10 && s.RequestsPerSec < 80 {
 		score += 0.2
 	}
@@ -48,9 +40,6 @@ func (d *Detector) Analyze(s *model.IPStats) model.Alert {
 		score += 0.4
 	}
 
-	// -----------------------
-	// BRUTE FORCE SIGNAL
-	// -----------------------
 	if s.FailedAtt > 5 {
 		score += 0.3
 	}
@@ -65,10 +54,6 @@ func (d *Detector) Analyze(s *model.IPStats) model.Alert {
 		Timestamp: time.Now().Unix(),
 		Risk:      score,
 	}
-
-	// -----------------------
-	// THEME CLASSIFICATION
-	// -----------------------
 	switch {
 	case score >= 0.85:
 		alert.Type = model.PORT_SCAN
@@ -90,7 +75,7 @@ func (d *Detector) Analyze(s *model.IPStats) model.Alert {
 		alert.Message = "NORMAL: traffic within baseline"
 		theme = "NORMAL"
 	}
-	// Optional: embed theme in message (very useful for logs/UI)
+
 	alert.Message = theme + " | " + alert.Message
 
 	return alert
