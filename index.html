@@ -78,9 +78,6 @@
      const ip = data.IP ?? data.SrcIP ?? "unknown";
      const risk = Number(data.Risk ?? data.PacketRate ?? 0);
 
-     // ----------------------------
-     // FINAL TYPE LOGIC (FIXED)
-     // ----------------------------
      let type = (data.Type || "ML").toUpperCase();
 
      if (!data.Type || type === "ML") {
