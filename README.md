@@ -61,5 +61,5 @@ Nexus IDS is a hybrid security monitoring system that:
 
 ### Clone repository
 ```bash
-git clone https://github.com/your-username/packet_engine.git
+git clone https://github.com/y33b/packet_engine.git
 cd packet_engine
